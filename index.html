@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="PM Tracker">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="Q2 2026 PM Site Tracker — IndexedDB Stable Storage Edition">
+<meta name="description" content="Q2 2026 PM Site Tracker — IndexedDB Stable Storage Engine with PDF Generation">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -78,6 +78,8 @@
   .btn-export:hover { background: var(--accent3); color: #fff; }
   .btn-import { border-color: var(--accent2); background: var(--accent2-bg); color: var(--accent2); }
   .btn-import:hover { background: var(--accent2); color: #fff; }
+  .btn-pdf { border-color: #4c1d95; background: #f3e8ff; color: #6b21a8; }
+  .btn-pdf:hover { background: #6b21a8; color: #fff; }
 
   /* ─── PROGRESS ─── */
   .progress-bar-wrap {
@@ -414,6 +416,65 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 12px; display: none;
   }
 
+  /* ─── NATIVE PDF CLEAN WINDOW ARCHITECTURE ─── */
+  #pdfTemplate { display: none; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 15mm 15mm 20mm 15mm; }
+    body { background: #fff; color: #000; font-size: 11px; padding-bottom: 0; }
+    header, .progress-bar-wrap, .controls, .status-summary, .main, .q3-info, .modal-overlay, #toast, .empty-filter {
+      display: none !important;
+    }
+    #pdfTemplate {
+      display: block !important;
+      font-family: 'IBM Plex Sans', sans-serif;
+      color: #000;
+    }
+    .pdf-page-cover {
+      page-break-after: always; /* Force Next Pages layout safely */
+      break-after: page;
+      padding-top: 20px;
+    }
+    .pdf-title-container {
+      border-bottom: 3px solid #1f2328; padding-bottom: 12px; margin-bottom: 30px;
+    }
+    .pdf-title-container h1 { font-family: 'IBM Plex Mono', monospace; font-size: 20px; text-transform: uppercase; }
+    .pdf-meta-line { font-family: 'IBM Plex Mono', monospace; font-size: 12px; margin-top: 4px; color: #444; }
+    
+    .pdf-section-title {
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600;
+      background: #eee; padding: 6px 10px; margin: 24px 0 12px 0; border-left: 4px solid #c8921a;
+    }
+    .pdf-grid-summary { display: flex; gap: 15px; margin-bottom: 25px; }
+    .pdf-metric-card {
+      flex: 1; border: 1.5px solid #ccc; padding: 12px; border-radius: 6px; text-align: center;
+    }
+    .pdf-metric-card h3 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #555; text-transform: uppercase; }
+    .pdf-metric-card .num { font-size: 24px; font-weight: 600; margin-top: 4px; }
+    
+    .pdf-progress-outer { background: #eee; border-radius: 4px; height: 16px; width: 100%; overflow: hidden; margin: 10px 0 25px 0; border: 1px solid #ccc; }
+    .pdf-progress-inner { height: 100%; background: #1a7f37; }
+
+    /* Report Summary Table Data layout */
+    .pdf-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .pdf-table th, .pdf-table td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+    .pdf-table th { background: #f5f5f5; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+    .pdf-table td { font-size: 11px; vertical-align: top; }
+    
+    .pdf-log-block { page-break-inside: avoid; break-inside: avoid; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; }
+    .pdf-log-header { background: #fafafa; padding: 6px 10px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd;}
+    .pdf-log-body { padding: 10px; line-height: 1.5; }
+    .pdf-badge-status { font-family: 'IBM Plex Mono', monospace; font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
+    .pb-done { background: #dafbe1; color: #1a7f37; }
+    .pb-pending { background: #fff8e1; color: #c8921a; }
+    .pb-issue { background: #ffebe9; color: #cf222e; }
+    
+    .pdf-next-pages {
+      page-break-before: always; /* Structural Jump to Next Page updates */
+      break-before: page;
+    }
+  }
+
   @media (max-width: 480px) {
     .site-name { font-size: 11px; }
     .site-code { min-width: 68px; font-size: 9px; }
@@ -435,6 +496,7 @@
     </div>
   </div>
   <div class="header-actions">
+    <button class="btn-action btn-pdf" onclick="generatePDF()">📄 PDF REPORT</button>
     <button class="btn-action btn-import" onclick="document.getElementById('importFile').click()">⬆ IMPORT</button>
     <button class="btn-action btn-export" onclick="exportBackup()">⬇ EXPORT</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
@@ -472,7 +534,6 @@
 
 <div class="main" id="main"></div>
 
-<!-- Q3 Tip Instruction Panel -->
 <div class="q3-info" id="q3Tip">
   <div class="q3-info-icon">💡</div>
   <div class="q3-info-text">
@@ -488,7 +549,6 @@
 </div>
 <div class="empty-filter" id="emptyMsg">📭 No sites match this filter.</div>
 
-<!-- Reset Confirmation Dialog Modal -->
 <div class="modal-overlay" id="resetModal">
   <div class="modal">
     <h3>⚠️ Reset All Data?</h3>
@@ -501,6 +561,8 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="pdfTemplate"></div>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -572,12 +634,11 @@ let currentFilter = "all";
 
 function initDB() {
   return new Promise((resolve, reject) => {
-    // Legacy migration safeguard
     try {
       const oldStorage = localStorage.getItem("pm_q2_2026_v3");
       if (oldStorage) {
         state = JSON.parse(oldStorage);
-        localStorage.removeItem("pm_q2_2026_v3"); // Clear to save space once extracted
+        localStorage.removeItem("pm_q2_2026_v3");
       }
     } catch(e) {}
 
@@ -914,6 +975,139 @@ function toggleZone(id) {
   if (el) el.classList.toggle("collapsed");
 }
 
+// ─── DYNAMIC MULTI-PAGE PRINT TO PDF ENGINE ──────────
+function generatePDF() {
+  const allSites = ZONES.flatMap(z => z.sites);
+  const doneCount = allSites.filter(x => getSite(x.id).status === "done").length;
+  const pendingCount = allSites.filter(x => getSite(x.id).status === "pending").length;
+  const issueCount = allSites.filter(x => getSite(x.id).status === "issue").length;
+  const pct = allSites.length ? Math.round(doneCount / allSites.length * 100) : 0;
+  const currentTimestamp = new Date().toLocaleString("en-MY", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+
+  let html = `
+    <div class="pdf-page-cover">
+      <div class="pdf-title-container">
+        <h1>CHELVAN Q2 2026 Site Tracker</h1>
+        <div class="pdf-meta-line">REPORT GENERATED: ${currentTimestamp} | REGION: PERAK</div>
+      </div>
+
+      <div class="pdf-section-title">PROJECT COMPLETION METRICS</div>
+      <div class="pdf-progress-outer">
+        <div class="pdf-progress-inner" style="width: ${pct}%"></div>
+      </div>
+
+      <div class="pdf-grid-summary">
+        <div class="pdf-metric-card" style="border-color:#1a7f37;">
+          <h3>Total Done</h3>
+          <div class="num" style="color:#1a7f37">${doneCount}</div>
+        </div>
+        <div class="pdf-metric-card" style="border-color:#c8921a;">
+          <h3>Total Pending</h3>
+          <div class="num" style="color:#c8921a">${pendingCount}</div>
+        </div>
+        <div class="pdf-metric-card" style="border-color:#cf222e;">
+          <h3>Flagged Issues</h3>
+          <div class="num" style="color:#cf222e">${issueCount}</div>
+        </div>
+      </div>
+
+      <div class="pdf-section-title">QUARTERLY ZONE MATRIX STATUS</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Zone Region Name</th>
+            <th>Total Allocation</th>
+            <th>Completed Checklist</th>
+            <th>Target Operational Progress</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  for (const zone of ZONES) {
+    const zTotal = zone.sites.length;
+    const zDone = zone.sites.filter(x => getSite(x.id).status === "done").length;
+    const zPct = zTotal ? Math.round(zDone / zTotal * 100) : 0;
+    html += `
+      <tr>
+        <td style="font-weight:600;">${zone.name}</td>
+        <td>${zTotal} Sites</td>
+        <td>${zDone} Done</td>
+        <td style="font-weight:600; color:${zPct===100?'#1a7f37':'#c8921a'}">${zPct}% Complete</td>
+      </tr>
+    `;
+  }
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pdf-next-pages">
+      <div class="pdf-section-title" style="margin-top:0;">DETAILED PROGRESS UPDATES & SITE REMEDIATION LOGS</div>
+  `;
+
+  let updateLogsFound = false;
+
+  for (const zone of ZONES) {
+    for (const site of zone.sites) {
+      const s = getSite(site.id);
+      
+      // Pull and render updates if the site has any comments, notes, or flagged technical issues
+      if (s.status === 'issue' || s.comment || s.note) {
+        updateLogsFound = true;
+        const statusClass = s.status === 'done' ? 'pb-done' : (s.status === 'issue' ? 'pb-issue' : 'pb-pending');
+        
+        html += `
+          <div class="pdf-log-block">
+            <div class="pdf-log-header">
+              <div>[${site.id}] ${site.name} <span style="font-weight:normal; color:#666; margin-left:8px;">(${zone.name})</span></div>
+              <span class="pdf-badge-status ${statusClass}">${s.status.toUpperCase()}</span>
+            </div>
+            <div class="pdf-log-body">
+        `;
+
+        if (s.comment) {
+          html += `<p style="margin-bottom:6px;"><strong>Inline Field Comment:</strong> ${s.comment}</p>`;
+        }
+        if (s.note) {
+          html += `<p style="margin-bottom:6px;"><strong>Extended Note Log:</strong> ${s.note}</p>`;
+        }
+        if (s.status === 'issue') {
+          html += `
+            <div style="background:#fff5f5; border:1px solid #fca5a5; padding:8px; margin-top:8px; border-radius:4px;">
+              <span style="color:#cf222e; font-weight:600; font-family:'IBM Plex Mono',monospace; font-size:10px;">⚠️ ACTIVE MAINTENANCE FIELD ISSUE LOG</span><br>
+              <span style="font-size:10px; color:#555;"><strong>Flagged Type:</strong> ${s.issueType ? s.issueType.toUpperCase() : 'UNSPECIFIED'} | <strong>Logged Date:</strong> ${s.issueDate || 'N/A'}</span>
+              <p style="margin-top:4px; color:#b91c1c;"><strong>Remediation Update Description:</strong> ${s.issueUpdate || 'Waiting for structural site details update.'}</p>
+              ${s.issueResolved ? '<p style="color:#1a7f37; font-weight:600; margin-top:2px;">✓ Resolution status verified inside database.</p>' : ''}
+            </div>
+          `;
+        }
+
+        html += `
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+
+  if (!updateLogsFound) {
+    html += `<p style="color:#57606a; font-style:italic; padding:15px; text-align:center;">No active comments, text logs, or open site execution issues reported for this tracking period.</p>`;
+  }
+
+  html += `</div>`;
+
+  // Inject content and trigger the browser print panel window
+  const templateContainer = document.getElementById("pdfTemplate");
+  templateContainer.innerHTML = html;
+  
+  // Minor safe delay window to allow DOM engine rendering calculations to secure structure stability
+  setTimeout(() => {
+    window.print();
+  }, 150);
+}
+
 // ─── DATA DESTRUCTION MANAGEMENT ─────────────────────
 function confirmReset() { document.getElementById("resetModal").classList.add("open"); }
 function closeModal(id)  { document.getElementById(id).classList.remove("open"); }
@@ -954,14 +1148,14 @@ function exportBackup() {
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const a    = document.createElement("a");
   a.href     = URL.createObjectURL(blob);
-  a.download = "PM-Q2-2026-backup-" + new Date().toISOString().split("T")[0] + ".json";
+  a.download = "PM-Q2-2026-backup-" + new Date().toISOString().split("T") + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
   showToast("⬇ Backup exported!", "success");
 }
 
 function importBackup(input) {
-  const file = input.files[0];
+  const file = input.files;
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -999,7 +1193,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Async start chain to ensure database connectivity before drawing UI
 initDB()
   .then(loadStateFromDB)
   .then(() => {
