@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="PM Tracker">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="Q2 2026 PM Site Tracker — field progress tracker">
+<meta name="description" content="Q2 2026 PM Site Tracker — IndexedDB Stable Storage Edition">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -204,7 +204,7 @@
     border: 1px solid #fca5a5; margin-left: 5px; vertical-align: middle; font-weight: 600;
   }
 
-  /* comment */
+  /* Inline Comments */
   .site-comment-inline {
     flex: 1; min-width: 60px; max-width: 140px;
     background: var(--surface2); border: 1px solid var(--border);
@@ -216,7 +216,7 @@
   .site-comment-inline::placeholder { color: var(--muted); font-style: italic; font-size: 9px; }
   .site-comment-inline.has-comment { border-color: rgba(5,80,174,0.4); background: var(--accent3-bg); }
 
-  /* status radio */
+  /* Status Radios */
   .site-status { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
   .status-option {
     display: flex; align-items: center; gap: 5px; cursor: pointer;
@@ -246,7 +246,7 @@
   .status-option[data-s="issue"].sel .status-radio::after { background: var(--danger); }
   .status-option[data-s="issue"].sel .status-label   { color: var(--danger); }
 
-  /* note btn */
+  /* Note Row Mechanics */
   .note-btn {
     font-family: 'IBM Plex Mono', monospace; font-size: 9px; padding: 3px 7px;
     border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
@@ -267,7 +267,7 @@
     border-radius: 4px; font-weight: 600; align-self: flex-end;
   }
 
-  /* ─── ISSUE PANEL (redesigned) ─── */
+  /* ─── ISSUE ROW LOG ─── */
   .issue-row {
     display: none;
     border-left: 5px solid var(--danger);
@@ -283,9 +283,7 @@
     border-bottom-color: #a7f3c0;
   }
 
-  .issue-header-bar {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  }
+  .issue-header-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .issue-flag {
     font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
     color: var(--danger); letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;
@@ -358,7 +356,7 @@
   .issue-save:hover { opacity: 0.85; }
   .issue-row.resolved .issue-save { background: var(--accent2); }
 
-  /* ─── Q3 TIP ─── */
+  /* ─── Q3 HINT PANEL ─── */
   .q3-info {
     margin: 12px 16px 0; padding: 12px 14px;
     background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px;
@@ -370,7 +368,7 @@
   .q3-info-text code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
   .q3-dismiss { display: inline-block; margin-top: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #92400e; cursor: pointer; text-decoration: underline; }
 
-  /* ─── MODAL ─── */
+  /* ─── CONFIRMATION MODALS ─── */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
     display: none; align-items: center; justify-content: center; padding: 20px;
@@ -397,7 +395,7 @@
   }
   .modal-confirm:hover { opacity: 0.85; }
 
-  /* ─── TOAST ─── */
+  /* ─── TOAST NOTIFICATIONS ─── */
   .toast {
     position: fixed; bottom: 20px; right: 16px;
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
@@ -474,7 +472,7 @@
 
 <div class="main" id="main"></div>
 
-<!-- Q3 Tip — bottom of list -->
+<!-- Q3 Tip Instruction Panel -->
 <div class="q3-info" id="q3Tip">
   <div class="q3-info-icon">💡</div>
   <div class="q3-info-text">
@@ -483,14 +481,14 @@
     2. Open <code>index.html</code> in any text editor (Notepad, VS Code, etc.).<br>
     3. Find the <code>ZONES</code> array (search for <code>// ─── SITE DATA</code>).<br>
     4. Replace all zone/site entries with your Q3 list using the same format.<br>
-    5. Change <code>STORAGE_KEY</code> to <code>"pm_q3_2026_v1"</code> so data stays separate.<br>
-    6. Upload the new file to GitHub — your Q2 backup JSON stays safe on your phone.
+    5. Change <code>DB_NAME</code> inside the script block to <code>"pm_q3_2026_db"</code>.<br>
+    6. Upload the new file to GitHub — your Q2 database stays completely separated and safe.
     <span class="q3-dismiss" onclick="document.getElementById('q3Tip').style.display='none'">[ DISMISS ]</span>
   </div>
 </div>
 <div class="empty-filter" id="emptyMsg">📭 No sites match this filter.</div>
 
-<!-- Reset Modal -->
+<!-- Reset Confirmation Dialog Modal -->
 <div class="modal-overlay" id="resetModal">
   <div class="modal">
     <h3>⚠️ Reset All Data?</h3>
@@ -507,10 +505,6 @@
 <script>
 // ══════════════════════════════════════════════════════
 // SITE DATA — Q2 2026 (APRIL · MAY · JUNE)
-//
-// ► TO UPDATE FOR Q3: Replace ZONES below with Q3 sites
-//   Keep same format: { id, name, sites:[{id,name},...] }
-//   Also change STORAGE_KEY to "pm_q3_2026_v1"
 // ══════════════════════════════════════════════════════
 const ZONES = [
   { id:"bagan_datuk", name:"BAGAN DATUK", sites:[
@@ -568,30 +562,76 @@ const ZONES = [
   ]}
 ];
 
-const STORAGE_KEY = "pm_q2_2026_v3";
+// ─── INDEXEDDB SECURE STORAGE DATABASE ENGINE ────────
+const DB_NAME = "pm_q2_2026_db";
+const DB_VERSION = 1;
+const STORE_NAME = "site_states";
+let db = null;
 let state = {};
 let currentFilter = "all";
 
-// ─── STATE ───────────────────────────────────────────
-function loadState() {
-  try { const s = localStorage.getItem(STORAGE_KEY); if (s) state = JSON.parse(s); } catch(e) { state = {}; }
+function initDB() {
+  return new Promise((resolve, reject) => {
+    // Legacy migration safeguard
+    try {
+      const oldStorage = localStorage.getItem("pm_q2_2026_v3");
+      if (oldStorage) {
+        state = JSON.parse(oldStorage);
+        localStorage.removeItem("pm_q2_2026_v3"); // Clear to save space once extracted
+      }
+    } catch(e) {}
+
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = (e) => reject("Database access error");
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve();
+    };
+    request.onupgradeneeded = (e) => {
+      let database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME);
+      }
+    };
+  });
 }
-function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+
+function loadStateFromDB() {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get("app_state");
+    
+    request.onsuccess = (e) => {
+      if (request.result) {
+        state = request.result;
+      }
+      resolve();
+    };
+    request.onerror = () => reject("Error loading state from database");
+  });
 }
+
+function saveStateToDB() {
+  const transaction = db.transaction([STORE_NAME], "readwrite");
+  const store = transaction.objectStore(STORE_NAME);
+  store.put(state, "app_state");
+}
+
 function getSite(id) {
   return state[id] || {
     checked: false, status: "pending", note: "", comment: "",
     issueType: "", issueUpdate: "", issueResolved: false, issueDate: ""
   };
 }
+
 function setSite(id, updates) {
   state[id] = Object.assign({}, getSite(id), updates);
-  saveState();
+  saveStateToDB();
   updateProgress();
 }
 
-// ─── ACTIONS ─────────────────────────────────────────
+// ─── UX/INTERACTION HANDLERS ────────────────────────
 function toggleCheck(id) {
   const s = getSite(id);
   const checked = !s.checked;
@@ -661,7 +701,7 @@ function saveIssue(id) {
   showToast(resolvedEl && resolvedEl.checked ? "✓ Issue resolved" : "Issue updated", resolvedEl && resolvedEl.checked ? "success" : "warn");
 }
 
-// ─── RENDER ──────────────────────────────────────────
+// ─── RENDER ENGINE ───────────────────────────────────
 function render() {
   const main = document.getElementById("main");
   main.innerHTML = "";
@@ -774,7 +814,7 @@ function buildIssueHTML(id, s) {
   `;
 }
 
-// ─── REFRESH ─────────────────────────────────────────
+// ─── REACTIVE STATE SYNCING ──────────────────────────
 function refreshRow(id) {
   const rowEl = document.getElementById("row-" + id);
   if (!rowEl) return;
@@ -800,7 +840,6 @@ function refreshRow(id) {
     if (icon) icon.textContent = s.issueResolved ? "✅" : "⚠️";
   }
 
-  // update zone badge
   for (const zone of ZONES) {
     if (zone.sites.find(x => x.id === id)) {
       const done = zone.sites.filter(x => getSite(x.id).status === "done").length;
@@ -814,7 +853,7 @@ function refreshRow(id) {
   }
 }
 
-// ─── PROGRESS ────────────────────────────────────────
+// ─── PROGRESS METRIC ENGINES ─────────────────────────
 function updateProgress() {
   const all     = ZONES.flatMap(z => z.sites);
   const total   = all.length;
@@ -836,7 +875,7 @@ function updateProgress() {
   if (si) si.textContent = issues;
 }
 
-// ─── FILTER ──────────────────────────────────────────
+// ─── VISIBILITY FILTERS ──────────────────────────────
 function setFilter(filter, btn) {
   currentFilter = filter;
   document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
@@ -870,24 +909,23 @@ function applyFilter() {
   if (emptyMsg) emptyMsg.style.display = anyVisible ? "none" : "block";
 }
 
-// ─── ZONE COLLAPSE ───────────────────────────────────
 function toggleZone(id) {
   const el = document.getElementById("zone-" + id);
   if (el) el.classList.toggle("collapsed");
 }
 
-// ─── RESET ───────────────────────────────────────────
+// ─── DATA DESTRUCTION MANAGEMENT ─────────────────────
 function confirmReset() { document.getElementById("resetModal").classList.add("open"); }
 function closeModal(id)  { document.getElementById(id).classList.remove("open"); }
 function resetAll() {
   state = {};
-  saveState();
+  saveStateToDB();
   closeModal("resetModal");
   render();
-  showToast("All data cleared", "warn");
+  showToast("All database data cleared", "warn");
 }
 
-// ─── TOAST ───────────────────────────────────────────
+// ─── NOTIFICATION TOAST ENGINE ───────────────────────
 let _toastTimer;
 function showToast(msg, type) {
   const t = document.getElementById("toast");
@@ -898,11 +936,11 @@ function showToast(msg, type) {
   _toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
 }
 
-// ─── EXPORT BACKUP ───────────────────────────────────
+// ─── RECOVERY BACKUP PIPELINES (JSON) ────────────────
 function exportBackup() {
   const all = ZONES.flatMap(z => z.sites);
   const backup = {
-    version:    STORAGE_KEY,
+    version:    DB_NAME,
     quarter:    "Q2 2026 (April – June)",
     exportedAt: new Date().toISOString(),
     summary: {
@@ -922,7 +960,6 @@ function exportBackup() {
   showToast("⬇ Backup exported!", "success");
 }
 
-// ─── IMPORT BACKUP ───────────────────────────────────
 function importBackup(input) {
   const file = input.files[0];
   if (!file) return;
@@ -931,17 +968,17 @@ function importBackup(input) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.state) throw new Error("No state found");
-      if (data.version && data.version !== STORAGE_KEY) {
+      if (data.version && data.version !== DB_NAME) {
         const ok = confirm(
-          'This backup is from "' + (data.quarter || data.version) + '".\n' +
-          'Your current quarter is Q2 2026.\n\nImport anyway?'
+          'This backup profile looks different.\n' +
+          'Your current tracker is optimized for Q2 2026.\n\nForce import anyway?'
         );
         if (!ok) { input.value = ""; return; }
       }
       state = data.state;
-      saveState();
+      saveStateToDB();
       render();
-      showToast("⬆ Backup imported!", "success");
+      showToast("⬆ Backup imported successfully!", "success");
     } catch(err) {
       alert("❌ Could not read backup file.\nMake sure it is a valid PM Tracker JSON export.");
     }
@@ -950,7 +987,7 @@ function importBackup(input) {
   reader.readAsText(file);
 }
 
-// ─── INIT ────────────────────────────────────────────
+// ─── RUNTIME INITIALIZATION ──────────────────────────
 function initDate() {
   const d = document.getElementById("dateDisplay");
   if (d) d.textContent = new Date().toLocaleDateString("en-MY", {
@@ -962,9 +999,16 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-loadState();
-initDate();
-render();
+// Async start chain to ensure database connectivity before drawing UI
+initDB()
+  .then(loadStateFromDB)
+  .then(() => {
+    initDate();
+    render();
+  })
+  .catch(err => {
+    alert("Database Init Error: " + err);
+  });
 </script>
 </body>
 </html>
